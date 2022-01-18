@@ -1,112 +1,188 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- * @flow strict-local
- */
+import React, { useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Text, View, SafeAreaView, StyleSheet, TextInput, TouchableOpacity, FlatList, Alert } from 'react-native';
+const Colors = { primary: '#1f145c', white: '#fff', grey: 'grey' };
 
-import React from 'react';
-import type {Node} from 'react';
-import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from 'react-native';
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
 
-const Section = ({children, title}): Node => {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
-};
+const App = () => {
+  const [textInput, settextInput] = useState('')
+  const [todos, settodos] = useState([])
+  useEffect(() => {
+    getTasksFromDevice();
+  }, [])
 
-const App: () => Node = () => {
-  const isDarkMode = useColorScheme() === 'dark';
+  useEffect(() => {
+    saveTasksToDevice();
+  }, [todos])
 
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+  const saveTasksToDevice = async () => {
+    try {
+      const stringifyTasks = JSON.stringify(todos)
+      await AsyncStorage.setItem('todos', stringifyTasks)
+    } catch (e) {
+      console.log(e)
+    }
+  };
+  const getTasksFromDevice = async () => {
+    try {
+      const todos = await AsyncStorage.getItem('todos')
+      if (todos != null) {
+        settodos(JSON.parse(todos));
+      }
+    } catch (e) {
+      console.log(e)
+    }
+  };
+  const setToDo = () => {
+    if (textInput == '') {
+      Alert.alert('Error', 'Please Enter a Task!')
+    }
+    else {
+      const newTask = {
+        id: Math.random(),
+        task: textInput,
+        completed: false
+      };
+      settodos([...todos, newTask])
+      settextInput('')
+    }
+  };
+  const markToDoComplete = todoid => {
+    const newTasks = todos.map(item => {
+      if (item.id == todoid) {
+        return { ...item, completed: true }
+      }
+      return item;
+    });
+    settodos(newTasks);
+  };
+  const deleteToDo = todoid => {
+    const newToDo = todos.filter(item => item.id != todoid)
+    settodos(newToDo);
+  };
+  const deleteAllToDo = () => {
+    Alert.alert('Confirm', 'Do you want to Clear All Tasks?', [
+      {
+        text: 'Yes',
+        onPress: () => settodos([]),
+      },
+      {
+        text: 'No'
+      }
+    ])
+
   };
 
-  return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.js</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
+
+
+
+  const ListItem = ({ todo }) => {
+    return (
+      <View style={{ padding: 20, backgroundColor: 'lightgrey', flexDirection: 'row', elevation: 12, borderRadius: 12, marginVertical: 10 }}>
+        <View style={{ flex: 1 }}>
+          <Text
+            style={{
+              fontSize: 15,
+              fontWeight: '600',
+              color: Colors.primary,
+              textDecorationLine: todo?.completed ? 'line-through' : 'none',
+            }}>
+            {todo?.task}
+          </Text>
         </View>
-      </ScrollView>
+        {!todo?.completed && (
+          <TouchableOpacity onPress={() => markToDoComplete(todo?.id)}>
+            <Text style={{ fontSize: 20 }}>
+              ✅ {/*was suppose to use vector icons but then thought to do it simply but it's not good practice though */}
+            </Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity>
+          <Text style={{ fontSize: 20 }} onPress={() => deleteToDo(todo?.id)}>
+            🗑
+          </Text>
+        </TouchableOpacity>
+
+      </View>
+    )
+  }
+
+  return (
+    <SafeAreaView
+      style={{
+        flex: 1,
+        backgroundColor: Colors.white
+      }}>
+      <View style={styles.header}>
+        <Text style={{ fontSize: 20, fontWeight: '600', color: Colors.primary }}>
+          Sooraj's TODO List
+        </Text>
+        <TouchableOpacity onPress={deleteAllToDo}>
+          <Text style={{ fontSize: 25 }}>🗑</Text>
+        </TouchableOpacity>
+      </View>
+      <FlatList
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ padding: 20, paddingBottom: 100 }}
+        data={todos}
+        renderItem={({ item }) => <ListItem todo={item} />}
+      />
+      <View style={styles.footer}>
+        <View style={styles.inputContainer}>
+          <TextInput
+            placeholder='Enter a Task!'
+            style={{ padding: 20 }}
+            onChangeText={(text) => settextInput(text)}
+            value={textInput}
+          />
+        </View>
+        <TouchableOpacity onPress={setToDo}>
+          <View style={styles.iconContainer}>
+            <Text style={{ fontSize: 35, color: 'white', fontWeight: '600' }}>
+              +
+            </Text>
+          </View>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
+  header: {
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
+  footer: {
+    position: 'absolute',
+    bottom: 0,
+    backgroundColor: Colors.white,
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
   },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
+  inputContainer: {
+    backgroundColor: '#f1f1f1',
+    flex: 1,
+    // height: 50,
+    marginVertical: 20,
+    marginRight: 20,
+    borderRadius: 30,
   },
-  highlight: {
-    fontWeight: '700',
-  },
+  iconContainer: {
+    height: 50,
+    width: 50,
+    backgroundColor: Colors.primary,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+
+
+  }
 });
 
 export default App;
