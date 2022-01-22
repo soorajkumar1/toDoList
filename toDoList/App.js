@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Text, View, SafeAreaView, StyleSheet, TextInput, TouchableOpacity, FlatList, Alert, Modal, Pressable, } from 'react-native';
-import filter from 'lodash.filter';
+import { filter } from 'lodash';
 const Colors = { primary: '#1f145c', white: '#fff', grey: 'grey', lightGrey: '#f1f1f1' };
 
 
